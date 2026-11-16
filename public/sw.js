@@ -1,7 +1,5 @@
-const CACHE_NAME = 'wilma-bakery-v2';
+const CACHE_NAME = 'wilma-bakery-v3';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icons/icon-192.svg',
   '/icons/icon-512.svg'
@@ -44,13 +42,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Always network-fresh for HTML navigation so mobile PWA never serves stale bundles
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
-      .then((response) => {
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
+      .then((response) => response)
+      .catch(() => caches.match(event.request))
   );
 });

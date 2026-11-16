@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sheet, CheckCircle2, AlertCircle, RefreshCw, RotateCcw, Zap, Clock } from 'lucide-react';
+import { X, Sheet, CheckCircle2, AlertCircle, RefreshCw, RotateCcw, Zap, Clock, Share2, Check } from 'lucide-react';
 import { SheetsSyncState } from '../types/bakery';
+import { buildShareableSheetLink } from '../services/sheetsSync';
 
 interface SheetsConfigModalProps {
   isOpen: boolean;
@@ -27,12 +28,14 @@ export const SheetsConfigModal: React.FC<SheetsConfigModalProps> = ({
 }) => {
   const [urlInput, setUrlInput] = useState(syncState.url || '');
   const [loading, setLoading] = useState(false);
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setUrlInput(syncState.url || '');
       setFeedback(null);
+      setCopiedShareLink(false);
     }
   }, [isOpen, syncState.url]);
 
@@ -75,6 +78,19 @@ export const SheetsConfigModal: React.FC<SheetsConfigModalProps> = ({
     });
   };
 
+  const handleCopyShareLink = async () => {
+    const activeUrl = urlInput.trim() || syncState.url;
+    if (!activeUrl) return;
+    const shareUrl = buildShareableSheetLink(activeUrl);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedShareLink(true);
+      setTimeout(() => setCopiedShareLink(false), 3000);
+    } catch {
+      setFeedback({ type: 'success', message: `Copia este enlace para abrir en tu celular: ${shareUrl}` });
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
       <div
@@ -101,14 +117,14 @@ export const SheetsConfigModal: React.FC<SheetsConfigModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
-          {/* Real-time explanation banner */}
+          {/* Real-time & Cross-device explanation banner */}
           <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
             <Zap className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="leading-relaxed">
               <strong className="block text-amber-950">
-                Solución al retardo de precios de Google Sheets:
+                Importante para PC y Móvil:
               </strong>
-              Ahora la aplicación usa <em>bypass de caché con timestamps dinámicos</em> y sincronización automática al cambiar de pestaña. Puedes pegar el enlace de tu hoja normal o el enlace publicado.
+              El enlace de Google Sheets se guarda localmente en cada dispositivo. Si vinculaste tu hoja en PC, usa el botón <strong>"Copiar enlace para Móvil"</strong> abajo para abrir exactamente los mismos precios e imágenes en tu celular.
             </div>
           </div>
 
@@ -141,6 +157,32 @@ export const SheetsConfigModal: React.FC<SheetsConfigModalProps> = ({
               className="w-full p-3 border border-gray-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-[#E85A8A] focus:outline-none"
             />
           </div>
+
+          {/* Cross-Device Share Button */}
+          {(urlInput.trim() || syncState.url) && (
+            <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-between gap-2 text-xs">
+              <span className="text-sky-900 font-medium">
+                ¿Quieres ver esta misma hoja en tu celular o en otra PC?
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyShareLink}
+                className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold flex items-center gap-1.5 whitespace-nowrap transition-colors"
+              >
+                {copiedShareLink ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>¡Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Copiar enlace para Móvil</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Real-time Auto-Sync Configuration Controls */}
           <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 space-y-3">

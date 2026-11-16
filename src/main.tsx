@@ -5,12 +5,24 @@ import './index.css';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     if (import.meta.env.PROD) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.log('SW registration error', err);
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
       });
+
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => {
+          reg.update().catch(() => {});
+        })
+        .catch((err) => {
+          console.log('SW registration error', err);
+        });
     } else {
       // In development, unregister any active service worker & clear stale caches
-      // so dev preview never serves outdated CSS/JS bundles.
       navigator.serviceWorker.getRegistrations().then((registrations) => {
         registrations.forEach((reg) => reg.unregister());
       });

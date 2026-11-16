@@ -23,8 +23,16 @@ export function parsePrice(val: unknown): { numberValue: number; textValue: stri
   }
 
   const raw = val.trim();
-  // Strip out "Bs.", "$", spaces, and normalize comma to period
-  const cleanNumber = raw.replace(/[^0-9.,]/g, '').replace(',', '.');
+  // Keep digits, dots and commas
+  let cleanNumber = raw.replace(/[^0-9.,]/g, '');
+
+  // Handle thousand separators like "1.200" or "1,200" vs decimal "120,50"
+  if (/^\d{1,3}([.,]\d{3})+$/.test(cleanNumber)) {
+    cleanNumber = cleanNumber.replace(/[.,]/g, '');
+  } else {
+    cleanNumber = cleanNumber.replace(',', '.');
+  }
+
   const parsed = parseFloat(cleanNumber);
 
   if (isNaN(parsed)) {
@@ -74,7 +82,7 @@ export function normalizeRow(row: Record<string, unknown>, index: number): Produ
     id: stableId,
     nombre: rawName,
     categoria: rawCat || 'Especiales',
-    precio: priceParsed.numberValue || 120,
+    precio: priceParsed.numberValue > 0 ? priceParsed.numberValue : 120,
     precioTexto: priceParsed.textValue,
     descripcion: rawDesc,
     imagen: safeImg,
@@ -85,26 +93,23 @@ export function normalizeRow(row: Record<string, unknown>, index: number): Produ
 
 /**
  * Builds the optimal real-time fetch URL:
- * - If standard Google Sheets edit/view URL, uses Google Visualizations API (gviz/tq) or export endpoint with zero cache delay.
- * - Adds dynamic cache-busting timestamp `_cb` to completely bypass browser and CDN caches.
+ * - If standard Google Sheets edit/view URL, uses Google Visualizations API (gviz/tq) with zero cache delay.
+ * - Adds dynamic cache-busting timestamp `_cb` to bypass browser and CDN caches without triggering CORS preflight.
  */
 export function buildRealtimeSheetUrl(sheetUrl: string): { url: string; mode: string } {
   const trimmed = sheetUrl.trim();
   const timestamp = Date.now();
 
-  // Pattern 1: standard Google Sheets link (e.g. /d/SPREADSHEET_ID/edit#gid=0)
   const match = trimmed.match(/\/d\/([a-zA-Z0-9-_]+)/);
   const gidMatch = trimmed.match(/gid=([0-9]+)/);
   const gid = gidMatch ? gidMatch[1] : '0';
 
   if (match && match[1] && !trimmed.includes('/pub?')) {
     const sheetId = match[1];
-    // Google Visualization CSV endpoint updates INSTANTLY without the 5-minute publishing cache
     const realtimeUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&_cb=${timestamp}`;
     return { url: realtimeUrl, mode: 'gviz_instant' };
   }
 
-  // Pattern 2: Published web CSV URL (/pub?output=csv)
   const separator = trimmed.includes('?') ? '&' : '?';
   const realtimeUrl = `${trimmed}${separator}_nocache=${timestamp}&_t=${timestamp}`;
   return { url: realtimeUrl, mode: 'published_cachebusted' };
@@ -122,19 +127,14 @@ export async function fetchAndParseGoogleSheet(
   const { url: fetchUrl } = buildRealtimeSheetUrl(trimmed);
 
   try {
-    // 1. Fetch with explicit cache-busting headers
+    // Use cache: 'no-store' WITHOUT custom headers so cross-origin CORS preflight
+    // never fails on mobile Safari/Chrome or Google redirects.
     const response = await fetch(fetchUrl, {
       method: 'GET',
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        Pragma: 'no-cache',
-        Expires: '0'
-      }
+      cache: 'no-store'
     });
 
     if (!response.ok) {
-      // Fallback: If gviz failed, try direct export
       if (fetchUrl.includes('/gviz/tq')) {
         const idMatch = trimmed.match(/\/d\/([a-zA-Z0-9-_]+)/);
         if (idMatch && idMatch[1]) {
@@ -152,7 +152,7 @@ export async function fetchAndParseGoogleSheet(
     const csvText = await response.text();
     return parseCsvString(csvText, existingProducts);
   } catch (err: unknown) {
-    // Try Papa.parse download as secondary fallback
+    // Secondary fallback using Papa.parse downloader
     return new Promise((resolve) => {
       Papa.parse(fetchUrl, {
         download: true,
@@ -231,7 +231,6 @@ function parseCsvString(csvText: string, existingProducts?: Product[]): ParseRes
     };
   }
 
-  // Detect price changes compared to previous products
   let changedPrices = 0;
   if (existingProducts && existingProducts.length > 0) {
     newProducts.forEach((newP) => {
@@ -264,7 +263,23 @@ function cacheProductsLocally(products: Product[]) {
 }
 
 export function getSavedSheetUrl(): string | null {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const urlParam = params.get('sheet');
+    if (urlParam && urlParam.trim().startsWith('http')) {
+      const clean = urlParam.trim();
+      localStorage.setItem(LOCAL_STORAGE_URL_KEY, clean);
+      return clean;
+    }
+  } catch {
+    // ignore URL parsing error
+  }
   return localStorage.getItem(LOCAL_STORAGE_URL_KEY);
+}
+
+export function buildShareableSheetLink(sheetUrl: string): string {
+  const base = `${window.location.origin}${window.location.pathname}`;
+  return `${base}?sheet=${encodeURIComponent(sheetUrl.trim())}`;
 }
 
 export function saveSheetUrl(url: string): void {
@@ -274,6 +289,15 @@ export function saveSheetUrl(url: string): void {
 export function removeSavedSheetUrl(): void {
   localStorage.removeItem(LOCAL_STORAGE_URL_KEY);
   localStorage.removeItem(LOCAL_STORAGE_PRODUCTS_KEY);
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('sheet')) {
+      url.searchParams.delete('sheet');
+      window.history.replaceState({}, '', url.toString());
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export function getCachedProducts(): Product[] {

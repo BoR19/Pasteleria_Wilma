@@ -30,10 +30,14 @@ import { Footer } from './components/Footer';
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>(() => getCachedProducts());
-  const [syncState, setSyncState] = useState<SheetsSyncState>({
-    url: getSavedSheetUrl() || '',
-    status: getSavedSheetUrl() ? 'syncing' : 'idle',
-    productCount: DEFAULT_PRODUCTS.length
+  const [syncState, setSyncState] = useState<SheetsSyncState>(() => {
+    const initialProducts = getCachedProducts();
+    const savedUrl = getSavedSheetUrl() || '';
+    return {
+      url: savedUrl,
+      status: savedUrl ? 'syncing' : 'idle',
+      productCount: initialProducts.length
+    };
   });
 
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
@@ -310,6 +314,22 @@ export default function App() {
             >
               <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>Actualizar</span>
+            </button>
+          </div>
+        )}
+
+        {syncState.status === 'error' && syncState.url && (
+          <div className="mb-4 p-2.5 sm:p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 flex flex-wrap items-center justify-between gap-2 text-xs shadow-xs">
+            <span className="text-[11px] font-medium">
+              ⚠️ No se pudo sincronizar con Google Sheets ({syncState.errorMessage || 'revisa tu conexión'}). Mostrando última copia disponible.
+            </span>
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className="px-2.5 py-0.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg font-bold flex items-center gap-1 text-[11px] transition-colors"
+            >
+              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>Reintentar</span>
             </button>
           </div>
         )}
