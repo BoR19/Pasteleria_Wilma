@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="pinkGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF9EBA"/>
+      <stop offset="100%" stop-color="#E85A8A"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#pinkGrad)"/>
+  <!-- Cake Base -->
+  <path d="M46 128 C46 120 52 114 60 114 L132 114 C140 114 146 120 146 128 L146 142 C146 147 142 150 138 150 L54 150 C50 150 46 147 46 142 Z" fill="#FFFFFF"/>
+  <!-- Middle Tier -->
+  <path d="M56 94 C56 88 62 82 70 82 L122 82 C130 82 136 88 136 94 L136 108 L56 108 Z" fill="#FFE8EE"/>
+  <!-- Top Tier -->
+  <path d="M68 62 C68 58 72 54 78 54 L114 54 C120 54 124 58 124 62 L124 76 L68 76 Z" fill="#FFFFFF"/>
+  <!-- Candle & Flame -->
+  <rect x="93" y="40" width="6" height="14" rx="2" fill="#FFE8EE"/>
+  <path d="M96 28 C99 33 99 36 96 38 C93 36 93 33 96 28 Z" fill="#FFE600"/>
+  <!-- Cream Drips -->
+  <circle cx="68" cy="116" r="4" fill="#FFE8EE"/>
+  <circle cx="96" cy="118" r="5" fill="#FFE8EE"/>
+  <circle cx="124" cy="116" r="4" fill="#FFE8EE"/>
+  <!-- Heart Cherry -->
+  <circle cx="96" cy="74" r="3" fill="#E85A8A"/>
+</svg>

@@ -1,0 +1,6 @@
+{
+  "name": "Pastelería Wilma - Catálogo Digital y Pedidos",
+  "description": "Catálogo digital interactivo para Pastelería Wilma con sincronización de Google Sheets, personalización de tortas, carrito de compras y pedidos directos por WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

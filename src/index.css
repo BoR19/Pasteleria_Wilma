@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: #341F14;
+    background-color: #FFFDF9;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.font-cursive {
+  font-family: 'Dancing Script', cursive;
+}
+
+.font-serif-title {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Soft blush pink gradient matching reference */
+.blush-hero-gradient {
+  background: linear-gradient(180deg, #FF9EBA 0%, #FFA8C0 55%, #FFB6CB 100%);
+}
+
+.pink-glow {
+  box-shadow: 0 10px 25px -5px rgba(232, 90, 138, 0.25);
+}
+
+.card-shadow {
+  box-shadow: 0 4px 16px -2px rgba(61, 35, 20, 0.06);
+}
+
+/* Hide scrollbar for category icon slider */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FFF5F7;
+}
+::-webkit-scrollbar-thumb {
+  background: #FFB3C6;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E85A8A;
+}

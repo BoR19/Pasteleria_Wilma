@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastelería Wilma - Catálogo Digital</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- PapaParse para leer Google Sheets CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandMint: '#A2D5C6',
+                        brandMintLight: '#E8F5F1',
+                        brandPink: '#E85A8A',
+                        brandPinkDark: '#C73866',
+                        brandChocolate: '#3D2314',
+                        brandCream: '#FFF8F0',
+                    },
+                    fontFamily: {
+                        cursive: ['"Dancing Script"', 'cursive'],
+                        sans: ['Poppins', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .drip-bg {
+            background-image: repeating-linear-gradient(45deg, #3D2314 0, #3D2314 15px, #2B180D 15px, #2B180D 30px);
+        }
+        .hero-pattern {
+            background-color: #A2D5C6;
+            background-image: radial-gradient(#ffffff 15%, transparent 16%);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-brandCream font-sans text-brandChocolate flex flex-col min-h-screen">
+
+    <!-- Header con Drip de Chocolate y Branding -->
+    <header class="bg-brandChocolate text-white relative shadow-lg">
+        <div class="h-3 bg-brandPink"></div>
+        <div class="hero-pattern py-8 px-4 text-center border-b-4 border-brandChocolate relative overflow-hidden">
+            <div class="max-w-4xl mx-auto relative z-10">
+                <span class="inline-block bg-white/80 backdrop-blur text-brandPinkDark px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-2 shadow-sm">
+                    Tortas para todo tipo de acontecimientos
+                </span>
+                <h1 class="font-cursive text-5xl md:text-7xl font-bold text-brandPink drop-shadow-[0_2px_2px_rgba(61,35,20,0.8)]">
+                    Pastelería Wilma
+                </h1>
+                <p class="text-brandChocolate font-medium text-sm md:text-base mt-2 max-w-lg mx-auto bg-white/60 backdrop-blur-sm rounded-lg p-2 border border-white/40">
+                    Matrimonios • 15 Años • Baby Shower • Bautizos y más
+                </p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Barra de Control de Datos / Google Sheets URL -->
+    <div class="bg-white border-b border-gray-200 shadow-sm py-2 px-4 text-xs">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div class="flex items-center gap-2 text-gray-600">
+                <i class="fa-solid fa-file-excel text-green-600 text-base"></i>
+                <span class="font-semibold">Fuente de Datos:</span>
+                <span id="data-status" class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-[11px] font-medium">Cargando catálogo...</span>
+            </div>
+            <button onclick="toggleConfigModal()" class="text-brandPink hover:underline flex items-center gap-1 font-medium">
+                <i class="fa-solid fa-gear"></i> Configurar Enlace Google Sheets
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <main class="max-w-6xl mx-auto px-4 py-8 flex-grow w-full">
+
+        <!-- Buscador y Filtros -->
+        <div class="mb-8 flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-2xl shadow-md border border-brandMint/30">
+            <!-- Buscador -->
+            <div class="relative w-full md:w-80">
+                <input type="text" id="search-input" onkeyup="filterProducts()" placeholder="Buscar torta o postre..." 
+                    class="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brandPink text-sm">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
+            </div>
+
+            <!-- Categorías (Tabs) -->
+            <div id="category-filters" class="flex flex-wrap gap-2 w-full md:w-auto justify-start md:justify-end">
+                <button onclick="selectCategory('Todos')" class="category-btn active px-4 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-all bg-brandPink text-white shadow-sm">
+                    Todos
+                </button>
+                <!-- Se poblarán dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Grid de Productos -->
+        <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Tarjetas de productos renderizadas por JS -->
+        </div>
+
+        <!-- Mensaje de Carga / Sin resultados -->
+        <div id="empty-state" class="hidden text-center py-16">
+            <i class="fa-solid fa-cake-candles text-5xl text-gray-300 mb-4"></i>
+            <h3 class="text-lg font-bold text-gray-600">No se encontraron productos</h3>
+            <p class="text-sm text-gray-400">Intenta buscando con otra palabra o categoría.</p>
+        </div>
+    </main>
+
+    <!-- Modal de Pedido / Detalles -->
+    <div id="product-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl transform transition-all">
+            <div class="relative h-64 bg-gray-100">
+                <img id="modal-img" src="" alt="" class="w-full h-full object-cover">
+                <button onclick="closeModal()" class="absolute top-4 right-4 bg-white/80 hover:bg-white text-gray-800 rounded-full w-9 h-9 flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+                <span id="modal-category" class="absolute bottom-4 left-4 bg-brandPink text-white text-xs font-bold px-3 py-1 rounded-full shadow"></span>
+            </div>
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 id="modal-title" class="text-2xl font-bold text-brandChocolate"></h3>
+                    <span id="modal-price" class="text-2xl font-bold text-brandPinkDark"></span>
+                </div>
+                <p id="modal-description" class="text-gray-600 text-sm mb-6 leading-relaxed"></p>
+
+                <!-- Personalización del Pedido -->
+                <div class="space-y-4 border-t border-gray-100 pt-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Detalle personalización / Nota:</label>
+                        <textarea id="order-note" placeholder="Ej: Dedicatoria 'Feliz Cumpleaños María', sabor de relleno..." class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brandPink focus:outline-none" rows="2"></textarea>
+                    </div>
+
+                    <a id="modal-whatsapp-btn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all">
+                        <i class="fa-brands fa-whatsapp text-xl"></i>
+                        Pedir por WhatsApp (+591 7023346)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Configuración Google Sheet -->
+    <div id="config-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-brandChocolate flex items-center gap-2">
+                    <i class="fa-solid fa-link text-brandPink"></i>
+                    Vincular con Google Sheets
+                </h3>
+                <button onclick="toggleConfigModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+                Para vincular tus datos en tiempo real:
+                <ol class="list-decimal list-inside text-xs text-gray-600 space-y-1 mb-4">
+                    <li>Crea tu Google Sheet con las columnas: <b>nombre, categoria, precio, descripcion, imagen</b></li>
+                    <li>En Google Sheets ve a: <i>Archivo &gt; Compartir &gt; Publicar en la web</i>.</li>
+                    <li>Selecciona tu hoja, elige formato <b>Valores separados por comas (.csv)</b> y haz clic en Publicar.</li>
+                    <li>Pega el enlace generado a continuación:</li>
+                </ol>
+            </p>
+
+            <div class="mb-4">
+                <label class="block text-xs font-bold uppercase mb-1 text-gray-700">URL del archivo CSV de Google Sheets:</label>
+                <input type="text" id="sheet-url-input" class="w-full p-3 border border-gray-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-brandPink" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+            </div>
+
+            <div class="flex gap-3 justify-end">
+                <button onclick="restoreDefaultData()" class="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-50">
+                    Usar Datos de Muestra
+                </button>
+                <button onclick="saveSheetUrl()" class="px-5 py-2 bg-brandPink text-white text-xs font-bold rounded-xl shadow hover:bg-brandPinkDark">
+                    Guardar y Cargar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sucursales y Información de Contacto -->
+    <footer class="bg-brandChocolate text-white mt-12 border-t-4 border-brandPink">
+        <div class="max-w-6xl mx-auto px-4 py-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <!-- Sucursal 1 -->
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
+                    <h4 class="font-bold text-brandMint text-base mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-store text-brandPink"></i> Sucursal #1
+                    </h4>
+                    <p class="text-xs text-gray-300 leading-relaxed">
+                        Mercado Campesino<br>
+                        Calle Comercio 2° Piso, Edificio El Crama
+                    </p>
+                </div>
+                <!-- Sucursal 2 -->
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
+                    <h4 class="font-bold text-brandMint text-base mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-store text-brandPink"></i> Sucursal #2
+                    </h4>
+                    <p class="text-xs text-gray-300 leading-relaxed">
+                        Mercado Central<br>
+                        Puesto #29, Sección Tortas
+                    </p>
+                </div>
+                <!-- Sucursal 3 -->
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
+                    <h4 class="font-bold text-brandMint text-base mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-store text-brandPink"></i> Sucursal #3
+                    </h4>
+                    <p class="text-xs text-gray-300 leading-relaxed">
+                        Barrio Moto Mendez<br>
+                        Avenida Javier Castellanos
+                    </p>
+                </div>
+            </div>
+
+            <div class="text-center pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-400">
+                <p>&copy; Pastelería Wilma - Todos los derechos reservados.</p>
+                <div class="flex items-center gap-4 text-base">
+                    <a href="https://wa.me/5917023346" target="_blank" class="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 text-xs">
+                        <i class="fa-brands fa-whatsapp text-lg"></i> Pedidos: 7023346
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Lógica de JavaScript -->
+    <script>
+        // Datos de muestra por defecto si no hay Google Sheet conectado
+        const defaultProducts = [
+            {
+                nombre: "Torta de Bodas Clásica",
+                categoria: "Matrimonios",
+                precio: "280 Bs.",
+                descripcion: "Torta de 3 pisos con delicado decorado en crema, bizcocho suave de vainilla y relleno de manjar blanco con nueces.",
+                imagen: "https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=600&q=80"
+            },
+            {
+                nombre: "Torta 15 Años Elegance",
+                categoria: "15 años",
+                precio: "220 Bs.",
+                descripcion: "Diseño moderno con detalles en tonos rosa y chocolate, bizcocho de chocolate húmedo y relleno de mousse de frutilla.",
+                imagen: "https://images.unsplash.com/photo-1562772186-36894546526c?auto=format&fit=crop&w=600&q=80"
+            },
+            {
+                nombre: "Torta Baby Shower Osito",
+                categoria: "Baby shower",
+                precio: "150 Bs.",
+                descripcion: "Decorado tierno en tonos pastel ideal para dar la bienvenida al bebé. Relleno cremoso de tres leches.",
+                imagen: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=600&q=80"
+            },
+            {
+                nombre: "Torta Bautizo Especial",
+                categoria: "Bautizos",
+                precio: "180 Bs.",
+                descripcion: "Elegante torta blanca con detalles dorados y motivo angelical. Bizcocho neutro con doble capa de mermelada y crema.",
+                imagen: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80"
+            },
+            {
+                nombre: "Torta Selva Negra Premium",
+                categoria: "Especiales",
+                precio: "130 Bs.",
+                descripcion: "Bizcocho de cacao, capas de crema batida, cerezas al jugo y virutas de chocolate amargo.",
+                imagen: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=600&q=80"
+            },
+            {
+                nombre: "Torta de Frutillas con Crema",
+                categoria: "Especiales",
+                precio: "110 Bs.",
+                descripcion: "Abundantes frutillas frescas seleccionadas sobre capas de crema diplomática y suave bizcochuelo.",
+                imagen: "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=600&q=80"
+            }
+        ];
+
+        let products = [];
+        let currentCategory = "Todos";
+        let activeProduct = null;
+        const whatsappPhone = "5917023346";
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('wilma_sheet_url');
+            if (savedUrl) {
+                document.getElementById('sheet-url-input').value = savedUrl;
+                loadFromGoogleSheet(savedUrl);
+            } else {
+                loadProducts(defaultProducts);
+                document.getElementById('data-status').innerText = "Usando Datos Locales de Ejemplo";
+                document.getElementById('data-status').className = "bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[11px] font-medium";
+            }
+        });
+
+        function loadFromGoogleSheet(url) {
+            document.getElementById('data-status').innerText = "Sincronizando Google Sheet...";
+            document.getElementById('data-status').className = "bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-[11px] font-medium";
+
+            Papa.parse(url, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if(results.data && results.data.length > 0) {
+                        products = results.data.map(item => ({
+                            nombre: item.nombre || item.Nombre || "Sin nombre",
+                            categoria: item.categoria || item.Categoria || "General",
+                            precio: item.precio || item.Precio || "Consultar",
+                            descripcion: item.descripcion || item.Descripcion || "",
+                            imagen: item.imagen || item.Imagen || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80"
+                        }));
+                        loadProducts(products);
+                        document.getElementById('data-status').innerText = "Enlazado a Google Sheet ✓";
+                        document.getElementById('data-status').className = "bg-green-100 text-green-800 px-2 py-0.5 rounded text-[11px] font-medium";
+                    } else {
+                        alert("No se pudieron extraer datos de la hoja. Revisa el formato CSV.");
+                        restoreDefaultData();
+                    }
+                },
+                error: function(err) {
+                    console.error(err);
+                    alert("Error al cargar la hoja de Google Sheets. Asegúrate de que esté 'Publicada en la Web' como CSV.");
+                    restoreDefaultData();
+                }
+            });
+        }
+
+        function loadProducts(data) {
+            products = data;
+            renderCategories();
+            renderProducts();
+        }
+
+        function renderCategories() {
+            const categories = ["Todos", ...new Set(products.map(p => p.categoria))];
+            const container = document.getElementById('category-filters');
+            container.innerHTML = "";
+
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.onclick = () => selectCategory(cat);
+                btn.innerText = cat;
+                const isActive = cat === currentCategory;
+                btn.className = `px-4 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-all ${
+                    isActive 
+                    ? 'bg-brandPink text-white shadow-sm' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`;
+                container.appendChild(btn);
+            });
+        }
+
+        function selectCategory(cat) {
+            currentCategory = cat;
+            renderCategories();
+            renderProducts();
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('products-grid');
+            const emptyState = document.getElementById('empty-state');
+            const searchQuery = document.getElementById('search-input').value.toLowerCase();
+
+            grid.innerHTML = "";
+
+            const filtered = products.filter(p => {
+                const matchesCategory = currentCategory === "Todos" || p.categoria === currentCategory;
+                const matchesSearch = p.nombre.toLowerCase().includes(searchQuery) || 
+                                     p.descripcion.toLowerCase().includes(searchQuery);
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filtered.forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col group";
+                    card.innerHTML = `
+                        <div class="relative h-52 overflow-hidden bg-gray-100">
+                            <img src="${product.imagen}" alt="${product.nombre}" 
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                onerror="this.src='https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80'">
+                            <span class="absolute top-3 left-3 bg-brandMint text-brandChocolate font-bold text-[11px] px-2.5 py-1 rounded-full shadow-sm">
+                                ${product.categoria}
+                            </span>
+                        </div>
+                        <div class="p-5 flex flex-col flex-grow justify-between">
+                            <div>
+                                <h3 class="font-bold text-gray-800 text-lg mb-1">${product.nombre}</h3>
+                                <p class="text-gray-500 text-xs line-clamp-2 mb-4">${product.descripcion}</p>
+                            </div>
+                            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                                <div>
+                                    <span class="text-[10px] text-gray-400 block uppercase font-bold">Precio</span>
+                                    <span class="text-xl font-bold text-brandPinkDark">${product.precio}</span>
+                                </div>
+                                <button onclick='openModal(${JSON.stringify(product).replace(/'/g, "&apos;")})' 
+                                    class="bg-brandPink hover:bg-brandPinkDark text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5">
+                                    <i class="fa-solid fa-cart-shopping"></i> Pedir
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        function filterProducts() {
+            renderProducts();
+        }
+
+        function openModal(product) {
+            activeProduct = product;
+            document.getElementById('modal-img').src = product.imagen;
+            document.getElementById('modal-title').innerText = product.nombre;
+            document.getElementById('modal-category').innerText = product.categoria;
+            document.getElementById('modal-price').innerText = product.precio;
+            document.getElementById('modal-description').innerText = product.descripcion;
+            document.getElementById('order-note').value = "";
+            
+            updateWhatsAppLink();
+            document.getElementById('product-modal').classList.remove('hidden');
+
+            document.getElementById('order-note').oninput = updateWhatsAppLink;
+        }
+
+        function updateWhatsAppLink() {
+            if (!activeProduct) return;
+            const note = document.getElementById('order-note').value;
+            let message = `¡Hola Pastelería Wilma! 👋 Quisiera hacer un pedido de:\n\n` +
+                          `🍰 *Producto:* ${activeProduct.nombre}\n` +
+                          `💰 *Precio:* ${activeProduct.precio}\n`;
+            if (note.trim() !== "") {
+                message += `📝 *Detalles / Notas:* ${note}\n`;
+            }
+            message += `\n¿Me confirman la disponibilidad por favor?`;
+
+            const encoded = encodeURIComponent(message);
+            document.getElementById('modal-whatsapp-btn').href = `https://wa.me/${whatsappPhone}?text=${encoded}`;
+        }
+
+        function closeModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+        }
+
+        function toggleConfigModal() {
+            const modal = document.getElementById('config-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function saveSheetUrl() {
+            const url = document.getElementById('sheet-url-input').value.trim();
+            if (url) {
+                localStorage.setItem('wilma_sheet_url', url);
+                loadFromGoogleSheet(url);
+                toggleConfigModal();
+            } else {
+                alert("Por favor introduce una URL válida.");
+            }
+        }
+
+        function restoreDefaultData() {
+            localStorage.removeItem('wilma_sheet_url');
+            document.getElementById('sheet-url-input').value = "";
+            loadProducts(defaultProducts);
+            document.getElementById('data-status').innerText = "Usando Datos Locales de Ejemplo";
+            document.getElementById('data-status').className = "bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[11px] font-medium";
+            toggleConfigModal();
+        }
+    </script>
+</body>
+</html>
