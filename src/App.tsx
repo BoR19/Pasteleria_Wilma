@@ -25,6 +25,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { BranchInfoModal } from './components/BranchInfoModal';
 import { SheetsConfigModal } from './components/SheetsConfigModal';
 import { SeniorAnalysisReportModal } from './components/SeniorAnalysisReportModal';
+import { AdminAuthModal } from './components/AdminAuthModal';
 import { BottomNav } from './components/BottomNav';
 import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { Footer } from './components/Footer';
@@ -50,13 +51,76 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [priceSort, setPriceSort] = useState<'default' | 'asc' | 'desc'>('default');
   const [showingFavoritesOnly, setShowingFavoritesOnly] = useState(false);
-  const [activeBottomTab, setActiveBottomTab] = useState<'catalog' | 'branches' | 'cart' | 'admin'>('catalog');
+  const [activeBottomTab, setActiveBottomTab] = useState<'catalog' | 'branches' | 'cart'>('catalog');
+
+  // Admin Mode (separated from customer storefront view)
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('wilma_admin_auth') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
+  const adminTapCountRef = useRef<{ count: number; lastTap: number }>({ count: 0, lastTap: 0 });
 
   // Modals state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isBranchesOpen, setIsBranchesOpen] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
   const [isSeniorReportOpen, setIsSeniorReportOpen] = useState(false);
+
+  // Detect ?admin=1 or #admin route entry
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const wantsAdmin = params.get('admin') === '1' || window.location.hash === '#admin';
+      if (wantsAdmin && !isAdminMode) {
+        setIsAdminAuthOpen(true);
+      }
+    } catch {
+      // ignore URL parsing errors
+    }
+  }, [isAdminMode]);
+
+  const handleEnableAdmin = () => {
+    try {
+      sessionStorage.setItem('wilma_admin_auth', '1');
+    } catch {
+      // ignore storage errors
+    }
+    setIsAdminMode(true);
+    showToast('Modo Administrador activado.', 'info');
+  };
+
+  const handleExitAdmin = () => {
+    try {
+      sessionStorage.removeItem('wilma_admin_auth');
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('admin') || url.hash === '#admin') {
+        url.searchParams.delete('admin');
+        if (url.hash === '#admin') url.hash = '';
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch {
+      // ignore
+    }
+    setIsAdminMode(false);
+    setIsSheetsModalOpen(false);
+    setIsSeniorReportOpen(false);
+  };
+
+  const handleSecretAdminTap = () => {
+    if (isAdminMode) return;
+    const now = Date.now();
+    const withinWindow = now - adminTapCountRef.current.lastTap < 1500;
+    const nextCount = withinWindow ? adminTapCountRef.current.count + 1 : 1;
+    adminTapCountRef.current = { count: nextCount, lastTap: now };
+    if (nextCount >= 5) {
+      adminTapCountRef.current = { count: 0, lastTap: 0 };
+      setIsAdminAuthOpen(true);
+    }
+  };
 
   // Cart & Favorites Hooks
   const {
@@ -266,7 +330,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Header with Blush Pink Curved Hero, Search Bar & Cart Icon (Reference UI) */}
+      {/* Header with Blush Pink Curved Hero, Search Bar & Cart Icon */}
       <Header
         cartCount={cartCount}
         favoritesCount={favoritesCount}
@@ -281,11 +345,14 @@ export default function App() {
         isSyncing={isSyncing}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        isAdminMode={isAdminMode}
+        onExitAdmin={handleExitAdmin}
+        onSecretAdminTap={handleSecretAdminTap}
       />
 
       {/* Main Content Area */}
       <main className="max-w-5xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
-        {/* Circular Category Icons Carousel (Exact Match to Reference UI) */}
+        {/* Circular Category Icons Carousel */}
         <CategoryIconBar
           categories={categories}
           selectedCategory={selectedCategory}
@@ -295,8 +362,8 @@ export default function App() {
           }}
         />
 
-        {/* Real-time sync indicator when Google Sheets is connected */}
-        {syncState.status === 'connected' && (
+        {/* Real-time sync indicator visible ONLY in Admin Mode */}
+        {isAdminMode && syncState.status === 'connected' && (
           <div className="mb-4 p-2.5 sm:p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-emerald-900 flex flex-wrap items-center justify-between gap-2 text-xs shadow-xs">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
@@ -309,6 +376,7 @@ export default function App() {
             </div>
 
             <button
+              type="button"
               onClick={handleManualSync}
               disabled={isSyncing}
               className="px-2.5 py-0.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold flex items-center gap-1 text-[11px] transition-colors"
@@ -319,12 +387,13 @@ export default function App() {
           </div>
         )}
 
-        {syncState.status === 'error' && syncState.url && (
+        {isAdminMode && syncState.status === 'error' && syncState.url && (
           <div className="mb-4 p-2.5 sm:p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 flex flex-wrap items-center justify-between gap-2 text-xs shadow-xs">
             <span className="text-[11px] font-medium">
               ⚠️ No se pudo sincronizar con Google Sheets ({syncState.errorMessage || 'revisa tu conexión'}). Mostrando última copia disponible.
             </span>
             <button
+              type="button"
               onClick={handleManualSync}
               disabled={isSyncing}
               className="px-2.5 py-0.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg font-bold flex items-center gap-1 text-[11px] transition-colors"
@@ -469,13 +538,20 @@ export default function App() {
         onChangePollingInterval={setPollingInterval}
       />
 
-      {/* Senior Developer Analysis Report Modal */}
+      {/* Senior Developer Analysis Report Modal (Admin only) */}
       <SeniorAnalysisReportModal
         isOpen={isSeniorReportOpen}
         onClose={() => setIsSeniorReportOpen(false)}
       />
 
-      {/* PWA Mobile Bottom Navigation Dock (Exact match to reference UI dock) */}
+      {/* Private Admin PIN Auth Modal */}
+      <AdminAuthModal
+        isOpen={isAdminAuthOpen}
+        onClose={() => setIsAdminAuthOpen(false)}
+        onAuthenticated={handleEnableAdmin}
+      />
+
+      {/* PWA Mobile Bottom Navigation Dock (Customer 4-tab view) */}
       <BottomNav
         activeTab={activeBottomTab}
         cartCount={cartCount}
@@ -494,10 +570,6 @@ export default function App() {
           setActiveBottomTab('cart');
           openCart();
         }}
-        onOpenAdmin={() => {
-          setActiveBottomTab('admin');
-          setIsSeniorReportOpen(true);
-        }}
         onToggleFavorites={() => {
           setShowingFavoritesOnly(!showingFavoritesOnly);
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -508,8 +580,14 @@ export default function App() {
       {/* Footer */}
       <Footer
         onOpenBranches={() => setIsBranchesOpen(true)}
-        onOpenSheetsModal={() => setIsSheetsModalOpen(true)}
-        onOpenSeniorReport={() => setIsSeniorReportOpen(true)}
+        isAdminMode={isAdminMode}
+        onOpenAdminAccess={() => {
+          if (isAdminMode) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else {
+            setIsAdminAuthOpen(true);
+          }
+        }}
       />
     </div>
   );

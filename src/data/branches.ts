@@ -41,6 +41,9 @@ export const BRANCHES_DATA: Branch[] = [
 // ============================================================================
 export const GOOGLE_SHEETS_OFICIAL_URL = 'https://docs.google.com/spreadsheets/d/1a_xTP5aurhovxrhkxjC_5vp4QoSjQSJfjGjBgKsjKjQ/edit?usp=sharing';
 
+// Clave privada para acceder al Modo Administrador (puedes cambiarla aquí o en Vercel con VITE_ADMIN_PIN)
+export const ADMIN_PIN = (import.meta.env?.VITE_ADMIN_PIN || 'wilma2026').trim();
+
 export const BAKERY_INFO = {
   name: 'Pastelería Wilma',
   slogan: 'Tortas para todo tipo de acontecimientos',

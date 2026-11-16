@@ -2,4 +2,5 @@
 
 interface ImportMetaEnv {
   readonly VITE_GOOGLE_SHEET_URL?: string;
+  readonly VITE_ADMIN_PIN?: string;
 }
