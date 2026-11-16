@@ -43,8 +43,8 @@ export const CategoryIconBar: React.FC<CategoryIconBarProps> = ({
   };
 
   return (
-    <div className="w-full py-4 px-2">
-      <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar py-2 px-2 scroll-smooth justify-start md:justify-center">
+    <div className="w-full py-3 px-2 overflow-x-auto no-scrollbar scroll-smooth">
+      <div className="flex items-start gap-3.5 sm:gap-5 py-2 px-2 mx-auto w-max min-w-0">
         {categories.map((cat) => {
           const meta = getCategoryMeta(cat);
           const Icon = meta.icon;
@@ -59,7 +59,7 @@ export const CategoryIconBar: React.FC<CategoryIconBarProps> = ({
             >
               {/* Circular Pink Button Matching Reference Image */}
               <div
-                className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${
+                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${
                   isSelected
                     ? 'bg-[#E85A8A] text-white ring-4 ring-[#FFB6CB] shadow-md scale-105'
                     : 'bg-white text-[#E85A8A] hover:bg-pink-50 border border-pink-100'
@@ -70,7 +70,7 @@ export const CategoryIconBar: React.FC<CategoryIconBarProps> = ({
 
               {/* Label Underneath */}
               <span
-                className={`text-[11px] sm:text-xs mt-1.5 font-medium transition-colors text-center line-clamp-1 max-w-[72px] ${
+                className={`text-[11px] sm:text-xs mt-1.5 font-medium transition-colors text-center line-clamp-1 max-w-[76px] ${
                   isSelected ? 'text-[#C73866] font-bold' : 'text-gray-600 group-hover:text-gray-900'
                 }`}
               >

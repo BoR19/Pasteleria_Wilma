@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, ShoppingBag, MapPin, Sheet, Code2, RefreshCw, Zap, X, Store, Heart } from 'lucide-react';
+import { Search, ShoppingBag, Sheet, Code2, RefreshCw, X, Store, Heart } from 'lucide-react';
 import { BAKERY_INFO } from '../data/branches';
 import { SheetsSyncState } from '../types/bakery';
 
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {syncState.status === 'connected'
                   ? `Google Sheets (${syncState.productCount} prod.)`
-                  : 'Catálogo Base (9 prod.)'}
+                  : `Catálogo Base (${syncState.productCount} prod.)`}
               </span>
             </button>
 
@@ -75,6 +75,19 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={onFilterFavorites}
+              className={`hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                showingFavoritesOnly
+                  ? 'bg-rose-500 text-white'
+                  : 'text-rose-200 hover:text-white bg-white/10 hover:bg-white/20'
+              }`}
+              title="Ver mis tortas favoritas"
+            >
+              <Heart className={`w-3 h-3 ${showingFavoritesOnly ? 'fill-white' : 'text-rose-400'}`} />
+              <span>Favoritos{favoritesCount > 0 ? ` (${favoritesCount})` : ''}</span>
+            </button>
+
             <button
               onClick={onOpenSeniorReport}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-pink-900/60 hover:bg-pink-800 text-pink-200 border border-pink-700/50 text-[11px] font-medium transition-colors"

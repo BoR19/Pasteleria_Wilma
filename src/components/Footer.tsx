@@ -1,5 +1,5 @@
 import React from 'react';
-import { Store, Phone, Heart, MapPin, Sheet, Code2, Clock, ShieldCheck } from 'lucide-react';
+import { Store, Phone, Sheet, Code2, Clock } from 'lucide-react';
 import { BRANCHES_DATA, BAKERY_INFO } from '../data/branches';
 
 interface FooterProps {

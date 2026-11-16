@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wilma-bakery-v1';
+const CACHE_NAME = 'wilma-bakery-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -32,8 +32,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network first, falling back to cache
   if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+  // Never intercept Vite dev modules or Google Sheets CSV requests
+  if (
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/src/') ||
+    url.hostname.includes('docs.google.com')
+  ) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Heart, ShoppingBag, Clock, Users, Zap, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, ShoppingBag, Zap } from 'lucide-react';
 import { Product } from '../types/bakery';
+import { FALLBACK_CAKE_IMAGE } from '../utils/bakeryHelpers';
 
 interface ProductCardProps {
   product: Product;
@@ -9,15 +10,17 @@ interface ProductCardProps {
   onSelectProduct: (product: Product) => void;
 }
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80';
-
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   isFavorite,
   onToggleFavorite,
   onSelectProduct
 }) => {
-  const [imgSrc, setImgSrc] = useState(product.imagen || FALLBACK_IMAGE);
+  const [imgSrc, setImgSrc] = useState(product.imagen || FALLBACK_CAKE_IMAGE);
+
+  useEffect(() => {
+    setImgSrc(product.imagen || FALLBACK_CAKE_IMAGE);
+  }, [product.imagen]);
 
   return (
     <div
@@ -33,8 +36,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <img
           src={imgSrc}
           alt={product.nombre}
-          onError={() => setImgSrc(FALLBACK_IMAGE)}
-          className="w-full h-full object-cover group-hover:scale-106 transition-transform duration-500 ease-out"
+          onError={() => setImgSrc(FALLBACK_CAKE_IMAGE)}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           loading="lazy"
         />
 

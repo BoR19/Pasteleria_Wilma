@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 import { Product } from '../types/bakery';
 import { DEFAULT_PRODUCTS } from '../data/defaultCatalog';
+import { FALLBACK_CAKE_IMAGE } from '../utils/bakeryHelpers';
 
 const LOCAL_STORAGE_URL_KEY = 'wilma_sheet_url';
 const LOCAL_STORAGE_PRODUCTS_KEY = 'wilma_cached_products';
@@ -59,9 +60,7 @@ export function normalizeRow(row: Record<string, unknown>, index: number): Produ
   const priceParsed = parsePrice(priceKey ? row[priceKey] : undefined);
 
   // Safe fallback image for bakery
-  const safeImg = rawImg.startsWith('http')
-    ? rawImg
-    : 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80';
+  const safeImg = rawImg.startsWith('http') ? rawImg : FALLBACK_CAKE_IMAGE;
 
   // Stable ID based on normalized name and index so favorites & cart links persist
   const slug = rawName
@@ -279,6 +278,9 @@ export function removeSavedSheetUrl(): void {
 
 export function getCachedProducts(): Product[] {
   try {
+    if (!getSavedSheetUrl()) {
+      return DEFAULT_PRODUCTS;
+    }
     const cached = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Store, MapPin, Clock, Phone, ExternalLink, Navigation } from 'lucide-react';
+import { X, Store, MapPin, Clock, Phone, Navigation } from 'lucide-react';
 import { BRANCHES_DATA, BAKERY_INFO } from '../data/branches';
 
 interface BranchInfoModalProps {

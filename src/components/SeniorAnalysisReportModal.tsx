@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShieldAlert, Sparkles, CheckCircle2, AlertTriangle, Layers, Cpu, Smartphone, Zap, RefreshCw, Clock } from 'lucide-react';
+import { X, ShieldAlert, Sparkles, CheckCircle2, AlertTriangle, Layers, Cpu, Smartphone, Zap } from 'lucide-react';
 
 interface SeniorAnalysisReportModalProps {
   isOpen: boolean;

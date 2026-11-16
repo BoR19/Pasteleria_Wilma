@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Sheet, CheckCircle2, AlertCircle, RefreshCw, RotateCcw, Zap, Clock, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Sheet, CheckCircle2, AlertCircle, RefreshCw, RotateCcw, Zap, Clock } from 'lucide-react';
 import { SheetsSyncState } from '../types/bakery';
 
 interface SheetsConfigModalProps {
@@ -28,6 +28,13 @@ export const SheetsConfigModal: React.FC<SheetsConfigModalProps> = ({
   const [urlInput, setUrlInput] = useState(syncState.url || '');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUrlInput(syncState.url || '');
+      setFeedback(null);
+    }
+  }, [isOpen, syncState.url]);
 
   if (!isOpen) return null;
 

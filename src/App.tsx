@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Search, Sparkles, ArrowUpDown, X, Cake, Code2, Zap, CheckCircle2, RefreshCw, Heart } from 'lucide-react';
+import { ArrowUpDown, X, Cake, Zap, RefreshCw } from 'lucide-react';
 import { Product, SheetsSyncState } from './types/bakery';
 import { DEFAULT_PRODUCTS } from './data/defaultCatalog';
 import {
@@ -119,6 +119,7 @@ export default function App() {
       }
 
       if (!isSilent) setIsSyncing(false);
+      return result;
     },
     [showToast]
   );
@@ -172,7 +173,10 @@ export default function App() {
   };
 
   const handleSaveSheetUrl = async (url: string) => {
-    await loadSheetData(url, false);
+    const result = await loadSheetData(url, false);
+    if (!result || !result.success) {
+      throw new Error(result?.error || 'No se pudo conectar con la hoja de Google Sheets.');
+    }
   };
 
   const handleRestoreDefaults = () => {
@@ -237,7 +241,7 @@ export default function App() {
 
       {/* Toast Notification for Real-Time Price Changes */}
       {toastMessage && (
-        <div className="fixed top-18 right-4 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+        <div className="fixed top-20 right-4 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
           <div
             className={`p-3.5 px-4 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold ${
               toastMessage.type === 'success'

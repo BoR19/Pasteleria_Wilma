@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, Trash2, Send, ShoppingBag, Store, Truck, Calendar, Clock, Sparkles } from 'lucide-react';
+import { X, Trash2, Send, ShoppingBag, Store, Truck, Calendar, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CartItem, OrderDetails } from '../types/bakery';
-import { BRANCHES_DATA, BAKERY_INFO } from '../data/branches';
+import { BRANCHES_DATA } from '../data/branches';
+import { FALLBACK_CAKE_IMAGE, buildWhatsAppUrl } from '../utils/bakeryHelpers';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -104,8 +105,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
     msg += `\n¡Quedo atento a su confirmación y disponibilidad! Muchas gracias ✨`;
 
-    const encoded = encodeURIComponent(msg);
-    window.open(`https://wa.me/${BAKERY_INFO.whatsappPhone}?text=${encoded}`, '_blank');
+    window.open(buildWhatsAppUrl(msg), '_blank');
   };
 
   return (
@@ -177,8 +177,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       alt={item.product.nombre}
                       className="w-16 h-16 rounded-xl object-cover bg-amber-50 flex-shrink-0"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80';
+                        (e.target as HTMLImageElement).src = FALLBACK_CAKE_IMAGE;
                       }}
                     />
                     <div className="flex-grow min-w-0">

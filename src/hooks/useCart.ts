@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CartItem, Product, CustomizationOptions } from '../types/bakery';
+import { calculateUnitPrice } from '../utils/bakeryHelpers';
 
 const CART_STORAGE_KEY = 'wilma_cart_items';
 
@@ -28,8 +29,7 @@ export function useCart() {
     customization: CustomizationOptions,
     quantity: number = 1
   ) => {
-    // Calculate unit price based on customization multiplier
-    const unitPrice = Math.round(product.precio * customization.multiplicadorPrecio);
+    const unitPrice = calculateUnitPrice(product.precio, customization);
     const cartItemId = `${product.id}-${customization.tamano}-${customization.saborBizcocho.slice(0, 5)}-${customization.relleno.slice(0, 5)}-${Date.now().toString(36)}`;
 
     const newItem: CartItem = {

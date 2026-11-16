@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, Send, Sparkles, Check, Cake, Flame } from 'lucide-react';
+import { X, ShoppingBag, Send, Check, Cake, Flame } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Product, CustomizationOptions } from '../types/bakery';
 import { SIZES_OPTIONS, SPONGE_OPTIONS, FILLING_OPTIONS } from '../data/defaultCatalog';
-import { BAKERY_INFO } from '../data/branches';
+import {
+  FALLBACK_CAKE_IMAGE,
+  CANDLE_TOPPER_PRICE,
+  calculateUnitPrice,
+  buildWhatsAppUrl
+} from '../utils/bakeryHelpers';
 
 interface ProductModalProps {
   product: Product | null;
@@ -51,8 +56,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   if (!product) return null;
 
   const currentSizeOption = SIZES_OPTIONS[selectedSizeIndex] || SIZES_OPTIONS[1];
-  const candlePrice = candles ? 10 : 0;
-  const unitPrice = Math.round(product.precio * currentSizeOption.multiplicador) + candlePrice;
+  const unitPrice = calculateUnitPrice(product.precio, {
+    multiplicadorPrecio: currentSizeOption.multiplicador,
+    velasOTop: candles
+  });
   const totalPrice = unitPrice * quantity;
 
   const getCustomizationObject = (): CustomizationOptions => ({
@@ -101,8 +108,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     text += `💰 *Total estimado:* ${totalPrice} Bs.\n\n`;
     text += `¿Me confirman disponibilidad y horario para coordinar? Muchas gracias!`;
 
-    const encoded = encodeURIComponent(text);
-    window.open(`https://wa.me/${BAKERY_INFO.whatsappPhone}?text=${encoded}`, '_blank');
+    window.open(buildWhatsAppUrl(text), '_blank');
   };
 
   return (
@@ -119,8 +125,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             alt={product.nombre}
             className="w-full h-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80';
+              (e.target as HTMLImageElement).src = FALLBACK_CAKE_IMAGE;
             }}
           />
           <button
@@ -266,7 +271,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
             </label>
             <span className="text-xs font-bold text-[#C73866] whitespace-nowrap">
-              +10 Bs.
+              +{CANDLE_TOPPER_PRICE} Bs.
             </span>
           </div>
 
@@ -320,7 +325,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           >
             {addedAnimation ? (
               <>
-                <Check className="w-4 h-4 animate-scale" />
+                <Check className="w-4 h-4" />
                 <span>¡Agregado al Carrito!</span>
               </>
             ) : (
