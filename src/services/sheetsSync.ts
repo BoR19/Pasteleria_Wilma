@@ -1,9 +1,11 @@
 import Papa from 'papaparse';
 import { Product } from '../types/bakery';
 import { DEFAULT_PRODUCTS } from '../data/defaultCatalog';
+import { BAKERY_INFO } from '../data/branches';
 import { FALLBACK_CAKE_IMAGE } from '../utils/bakeryHelpers';
 
 const LOCAL_STORAGE_URL_KEY = 'wilma_sheet_url';
+const LOCAL_STORAGE_OFFICIAL_SNAPSHOT_KEY = 'wilma_official_sheet_snapshot';
 const LOCAL_STORAGE_PRODUCTS_KEY = 'wilma_cached_products';
 
 export interface ParseResult {
@@ -42,24 +44,60 @@ export function parsePrice(val: unknown): { numberValue: number; textValue: stri
   return { numberValue: parsed, textValue: `${parsed} Bs.` };
 }
 
+function normalizeImageUrl(rawImg: string): string {
+  const trimmed = rawImg.trim();
+  if (!trimmed) return FALLBACK_CAKE_IMAGE;
+
+  // Repair known dead Unsplash URL (404)
+  if (trimmed.includes('photo-1535141192574-5d4897c13136')) {
+    return 'https://images.unsplash.com/photo-1522767131594-6b7e96848fba?auto=format&fit=crop&w=800&q=80';
+  }
+
+  // Convert Google Drive sharing links into direct embeddable image URLs
+  if (trimmed.includes('drive.google.com')) {
+    const fileMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const idParamMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const driveId = fileMatch?.[1] || idParamMatch?.[1];
+    if (driveId) {
+      return `https://drive.google.com/thumbnail?id=${driveId}&sz=w1000`;
+    }
+  }
+
+  return trimmed.startsWith('http') ? trimmed : FALLBACK_CAKE_IMAGE;
+}
+
 export function normalizeRow(row: Record<string, unknown>, index: number): Product | null {
   const keys = Object.keys(row);
-  const findKey = (candidates: string[]): string | undefined => {
+  const findKey = (candidates: string[], exactOnly = false): string | undefined => {
+    const exactMatch = keys.find((k) => {
+      const lower = k.trim().toLowerCase();
+      return candidates.some((c) => lower === c);
+    });
+    if (exactMatch || exactOnly) return exactMatch;
+
     return keys.find((k) => {
       const lower = k.trim().toLowerCase();
-      return candidates.some((c) => lower === c || lower.includes(c));
+      return candidates.some((c) => lower.includes(c));
     });
   };
 
+  const idKey = findKey(['id', 'id_producto', 'codigo', 'código', 'sku'], true);
   const nameKey = findKey(['nombre', 'torta', 'producto', 'title', 'name']);
   const catKey = findKey(['categoria', 'categoría', 'seccion', 'tipo', 'category']);
   const priceKey = findKey(['precio', 'costo', 'valor', 'price']);
   const descKey = findKey(['descripcion', 'descripción', 'detalle', 'ingredientes', 'description']);
+  const statusKey = findKey(['estado', 'disponible', 'status', 'activo']);
   const imgKey = findKey(['imagen', 'foto', 'image', 'url', 'pic']);
 
   const rawName = nameKey ? String(row[nameKey] ?? '').trim() : '';
   if (!rawName) return null; // Skip empty rows
 
+  const rawStatus = statusKey ? String(row[statusKey] ?? '').trim().toLowerCase() : '';
+  if (rawStatus && ['no disponible', 'agotado', 'inactivo', 'oculto', 'false', '0'].includes(rawStatus)) {
+    return null;
+  }
+
+  const rawId = idKey ? String(row[idKey] ?? '').trim() : '';
   const rawCat = catKey ? String(row[catKey] ?? '').trim() : 'Especiales';
   const rawDesc = descKey
     ? String(row[descKey] ?? '').trim()
@@ -67,16 +105,15 @@ export function normalizeRow(row: Record<string, unknown>, index: number): Produ
   const rawImg = imgKey ? String(row[imgKey] ?? '').trim() : '';
   const priceParsed = parsePrice(priceKey ? row[priceKey] : undefined);
 
-  // Safe fallback image for bakery
-  const safeImg = rawImg.startsWith('http') ? rawImg : FALLBACK_CAKE_IMAGE;
+  const safeImg = normalizeImageUrl(rawImg);
 
-  // Stable ID based on normalized name and index so favorites & cart links persist
+  // Prefer explicit sheet ID if available, otherwise stable slug ID
   const slug = rawName
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '-');
-  const stableId = `sheet-${index}-${slug}`;
+  const stableId = rawId || `sheet-${index}-${slug}`;
 
   return {
     id: stableId,
@@ -92,19 +129,37 @@ export function normalizeRow(row: Record<string, unknown>, index: number): Produ
 }
 
 /**
- * Builds the optimal real-time fetch URL:
- * - If standard Google Sheets edit/view URL, uses Google Visualizations API (gviz/tq) with zero cache delay.
- * - Adds dynamic cache-busting timestamp `_cb` to bypass browser and CDN caches without triggering CORS preflight.
+ * Builds the optimal real-time fetch URL supporting:
+ * 1) Standard Google Sheets share/edit URLs -> gviz/tq CSV endpoint (zero delay)
+ * 2) Published-to-web URLs (/d/e/.../pubhtml or /pub?output=html or /pub?output=csv) -> CSV with cache buster
+ * 3) Direct CSV URLs -> dynamic cache-busting timestamp
  */
 export function buildRealtimeSheetUrl(sheetUrl: string): { url: string; mode: string } {
   const trimmed = sheetUrl.trim();
   const timestamp = Date.now();
-
-  const match = trimmed.match(/\/d\/([a-zA-Z0-9-_]+)/);
   const gidMatch = trimmed.match(/gid=([0-9]+)/);
   const gid = gidMatch ? gidMatch[1] : '0';
 
-  if (match && match[1] && !trimmed.includes('/pub?')) {
+  // Handle "Publish to the web" links (/d/e/2PACX-.../pubhtml or /pub?...)
+  if (trimmed.includes('/d/e/') || trimmed.includes('/pubhtml') || trimmed.includes('/pub?')) {
+    let csvUrl = trimmed
+      .replace(/\/pubhtml(\?.*)?$/, (_, qs) => `/pub${qs || ''}`)
+      .replace(/output=html/gi, 'output=csv');
+
+    if (!csvUrl.includes('output=csv')) {
+      const sep = csvUrl.includes('?') ? '&' : '?';
+      csvUrl = `${csvUrl}${sep}output=csv`;
+    }
+    const sep = csvUrl.includes('?') ? '&' : '?';
+    return {
+      url: `${csvUrl}${sep}_nocache=${timestamp}&_t=${timestamp}`,
+      mode: 'published_cachebusted'
+    };
+  }
+
+  // Handle standard Google Sheets URLs (/spreadsheets/d/<ID>/edit...)
+  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/) || trimmed.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (match && match[1] && match[1] !== 'e') {
     const sheetId = match[1];
     const realtimeUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&_cb=${timestamp}`;
     return { url: realtimeUrl, mode: 'gviz_instant' };
@@ -112,7 +167,7 @@ export function buildRealtimeSheetUrl(sheetUrl: string): { url: string; mode: st
 
   const separator = trimmed.includes('?') ? '&' : '?';
   const realtimeUrl = `${trimmed}${separator}_nocache=${timestamp}&_t=${timestamp}`;
-  return { url: realtimeUrl, mode: 'published_cachebusted' };
+  return { url: realtimeUrl, mode: 'direct_csv' };
 }
 
 export async function fetchAndParseGoogleSheet(
@@ -274,7 +329,29 @@ export function getSavedSheetUrl(): string | null {
   } catch {
     // ignore URL parsing error
   }
-  return localStorage.getItem(LOCAL_STORAGE_URL_KEY);
+
+  const globalOfficial = BAKERY_INFO.officialSheetUrl.trim();
+  const previousOfficial = localStorage.getItem(LOCAL_STORAGE_OFFICIAL_SNAPSHOT_KEY) || '';
+  if (globalOfficial !== previousOfficial) {
+    // Official store link changed in code/Vercel: clear stale overrides & product cache
+    // so every device (including the owner's) immediately receives the new official catalog.
+    localStorage.setItem(LOCAL_STORAGE_OFFICIAL_SNAPSHOT_KEY, globalOfficial);
+    localStorage.removeItem(LOCAL_STORAGE_URL_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_PRODUCTS_KEY);
+  }
+
+  const localOverride = localStorage.getItem(LOCAL_STORAGE_URL_KEY);
+  if (localOverride && localOverride.trim()) {
+    return localOverride.trim();
+  }
+  return globalOfficial || null;
+}
+
+export function isGlobalOfficialSheetActive(): boolean {
+  const official = BAKERY_INFO.officialSheetUrl.trim();
+  if (!official) return false;
+  const localOverride = localStorage.getItem(LOCAL_STORAGE_URL_KEY)?.trim();
+  return !localOverride || localOverride === official;
 }
 
 export function buildShareableSheetLink(sheetUrl: string): string {
@@ -283,7 +360,14 @@ export function buildShareableSheetLink(sheetUrl: string): string {
 }
 
 export function saveSheetUrl(url: string): void {
-  localStorage.setItem(LOCAL_STORAGE_URL_KEY, url);
+  const clean = url.trim();
+  const official = BAKERY_INFO.officialSheetUrl.trim();
+  if (official && clean === official) {
+    // Do not shadow the global official URL with a local override
+    localStorage.removeItem(LOCAL_STORAGE_URL_KEY);
+    return;
+  }
+  localStorage.setItem(LOCAL_STORAGE_URL_KEY, clean);
 }
 
 export function removeSavedSheetUrl(): void {

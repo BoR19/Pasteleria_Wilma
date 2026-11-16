@@ -12,7 +12,8 @@ import {
   getSavedSheetUrl,
   saveSheetUrl as persistSheetUrl,
   removeSavedSheetUrl,
-  fetchAndParseGoogleSheet
+  fetchAndParseGoogleSheet,
+  isGlobalOfficialSheetActive
 } from './services/sheetsSync';
 import { useCart } from './hooks/useCart';
 import { useFavorites } from './hooks/useFavorites';
@@ -132,7 +133,7 @@ export default function App() {
   useEffect(() => {
     const savedUrl = getSavedSheetUrl();
     if (savedUrl) {
-      loadSheetData(savedUrl, false);
+      loadSheetData(savedUrl, isGlobalOfficialSheetActive());
     }
   }, [loadSheetData]);
 

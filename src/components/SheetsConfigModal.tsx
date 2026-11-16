@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sheet, CheckCircle2, AlertCircle, RefreshCw, RotateCcw, Zap, Clock, Share2, Check } from 'lucide-react';
 import { SheetsSyncState } from '../types/bakery';
-import { buildShareableSheetLink } from '../services/sheetsSync';
+import { buildShareableSheetLink, isGlobalOfficialSheetActive } from '../services/sheetsSync';
 
 interface SheetsConfigModalProps {
   isOpen: boolean;
@@ -117,14 +117,25 @@ export const SheetsConfigModal: React.FC<SheetsConfigModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
-          {/* Real-time & Cross-device explanation banner */}
+          {/* Global Production Guidance Banner */}
           <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
             <Zap className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <strong className="block text-amber-950">
-                Importante para PC y Móvil:
-              </strong>
-              El enlace de Google Sheets se guarda localmente en cada dispositivo. Si vinculaste tu hoja en PC, usa el botón <strong>"Copiar enlace para Móvil"</strong> abajo para abrir exactamente los mismos precios e imágenes en tu celular.
+              {isGlobalOfficialSheetActive() ? (
+                <>
+                  <strong className="block text-emerald-800">
+                    ✅ Catálogo Global Activo para Todos tus Clientes
+                  </strong>
+                  Tu enlace oficial (<code className="bg-white px-1 rounded border">GOOGLE_SHEETS_OFICIAL_URL</code> o <code className="bg-white px-1 rounded border">VITE_GOOGLE_SHEET_URL</code>) está activo. Cualquier cliente en PC o celular ve esta hoja automáticamente sin configurar nada.
+                </>
+              ) : (
+                <>
+                  <strong className="block text-amber-950">
+                    ¿Cómo hacer que TODOS tus clientes vean tu Google Sheet automáticamente?
+                  </strong>
+                  Pega tu enlace una sola vez en <code className="bg-white px-1 rounded border">GOOGLE_SHEETS_OFICIAL_URL</code> dentro de <code className="bg-white px-1 rounded border">src/data/branches.ts</code> (o como <code className="bg-white px-1 rounded border">VITE_GOOGLE_SHEET_URL</code> en Vercel). Este cuadro sirve para pruebas locales.
+                </>
+              )}
             </div>
           </div>
 

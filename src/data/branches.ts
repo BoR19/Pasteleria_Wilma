@@ -33,11 +33,20 @@ export const BRANCHES_DATA: Branch[] = [
   }
 ];
 
+// ============================================================================
+// 📌 PEGA AQUÍ EL LINK DE TU GOOGLE SHEETS OFICIAL (entre las comillas '')
+// Al pegarlo aquí (o en Vercel como VITE_GOOGLE_SHEET_URL), TODOS tus clientes
+// en PC y celular verán los precios, productos e imágenes actualizados en vivo.
+// Ejemplo: 'https://docs.google.com/spreadsheets/d/1ABC.../edit?usp=sharing'
+// ============================================================================
+export const GOOGLE_SHEETS_OFICIAL_URL = 'https://docs.google.com/spreadsheets/d/1a_xTP5aurhovxrhkxjC_5vp4QoSjQSJfjGjBgKsjKjQ/edit?usp=sharing';
+
 export const BAKERY_INFO = {
   name: 'Pastelería Wilma',
   slogan: 'Tortas para todo tipo de acontecimientos',
   whatsappPhone: '5917023346',
   displayPhone: '+591 7023346',
   city: 'Tarija, Bolivia',
-  events: ['Matrimonios', '15 Años', 'Baby Shower', 'Bautizos', 'Cumpleaños', 'Eventos Corporativos']
+  events: ['Matrimonios', '15 Años', 'Baby Shower', 'Bautizos', 'Cumpleaños', 'Eventos Corporativos'],
+  officialSheetUrl: (GOOGLE_SHEETS_OFICIAL_URL || import.meta.env?.VITE_GOOGLE_SHEET_URL || '').trim()
 };
