@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Trash2, Send, ShoppingBag, Store, Truck, Calendar, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CartItem, OrderDetails } from '../types/bakery';
-import { BRANCHES_DATA } from '../data/branches';
+import { BRANCHES_DATA, BAKERY_INFO } from '../data/branches';
 import { FALLBACK_CAKE_IMAGE, buildWhatsAppUrl } from '../utils/bakeryHelpers';
 
 interface CartDrawerProps {
@@ -328,7 +328,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     type="tel"
                     value={orderDetails.customerPhone}
                     onChange={(e) => setOrderDetails((p) => ({ ...p, customerPhone: e.target.value }))}
-                    placeholder="Ej: 7023346"
+                    placeholder="Ej: 70232346"
                     className="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-[#E85A8A] focus:outline-none"
                   />
                 </div>
@@ -415,7 +415,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2.5 shadow-lg hover:shadow-xl transition-all text-xs sm:text-sm"
             >
               <Send className="w-4 h-4" />
-              <span>Enviar Pedido por WhatsApp (+591 7023346)</span>
+              <span>Enviar Pedido por WhatsApp ({BAKERY_INFO.displayPhone})</span>
             </button>
           </div>
         )}
